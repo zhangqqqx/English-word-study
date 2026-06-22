@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单词背诵工具</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bg4:#1e3a5f;--text:#e0e0e0;--text2:#a0a0b0;--accent:#e94560;--green:#27ae60;--orange:#f39c12;--red:#e74c3c;--border:#2a2a4a;--card:#252540}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.6;padding:0;min-height:100vh}
+.app{max-width:800px;margin:0 auto;padding:20px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+header h1{font-size:22px;color:var(--text)}
+.btn{background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;transition:opacity .2s}
+.btn:hover{opacity:.85}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-green{background:var(--green)}
+.btn-orange{background:var(--orange)}
+.btn-red{background:var(--red)}
+.btn-blue{background:#3498db}
+.btn-sm{padding:4px 10px;font-size:12px}
+.tabs{display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tab{padding:10px 20px;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);font-size:15px;transition:all .2s;white-space:nowrap}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover{color:var(--text)}
+.stats{display:flex;gap:20px;margin-bottom:20px;padding:16px;background:var(--bg2);border-radius:8px;flex-wrap:wrap}
+.stat-item{font-size:14px;color:var(--text2)}
+.stat-item span{color:var(--accent);font-weight:bold}
+.review-btn-wrap{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.review-btn{padding:14px 40px;font-size:16px;font-weight:bold}
+.learn-btn{padding:14px 40px;font-size:16px;font-weight:bold;background:var(--green)}
+.word-list{list-style:none}
+.word-item{background:var(--bg2);border-radius:8px;margin-bottom:8px;padding:12px 16px;cursor:pointer;transition:background .2s}
+.word-item:hover{background:var(--bg3)}
+.word-item .word-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}
+.word-item .word-en{font-size:16px;font-weight:600}
+.word-item .word-ipa{font-size:13px;color:var(--text2);margin-left:8px}
+.word-item .word-meta{font-size:12px;color:var(--text2)}
+.word-item .word-actions{display:flex;gap:6px;margin-top:8px}
+.word-detail{display:none;padding:10px 0;font-size:14px;color:var(--text2)}
+.word-detail.show{display:block}
+.word-detail .zh{color:var(--text);font-size:15px;margin-bottom:4px}
+.word-detail .example{color:var(--text2);font-style:italic}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:100;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border-radius:12px;padding:24px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto}
+.modal h2{margin-bottom:16px;font-size:18px}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:13px;color:var(--text2);margin-bottom:4px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:14px}
+.form-group textarea{height:60px;resize:vertical}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+
+/* 学习/复习模式 - 卡片式 */
+.study-mode{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:50;overflow-y:auto}
+.study-mode.active{display:block}
+.study-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.study-header .back-btn{color:var(--text2);font-size:14px;cursor:pointer}
+.study-header .title{font-size:16px;font-weight:600}
+.study-header .progress{font-size:14px;color:var(--text2)}
+.progress-bar{height:3px;background:var(--border)}
+.progress-bar .fill{height:100%;background:var(--accent);transition:width .3s}
+
+/* 单词卡片 */
+.word-card{background:linear-gradient(135deg,var(--bg4) 0%,var(--bg3) 100%);border-radius:0 0 20px 20px;padding:40px 24px 30px;text-align:center;margin-bottom:20px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.word-card .word-main{font-size:42px;font-weight:bold;margin-bottom:12px;letter-spacing:1px}
+.word-card .word-phonetic{font-size:18px;color:var(--text2);margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:8px}
+.word-card .word-phonetic .speaker{cursor:pointer;padding:4px 8px;background:rgba(255,255,255,.1);border-radius:4px;font-size:14px}
+.word-card .word-phonetic .speaker:hover{background:rgba(255,255,255,.2)}
+
+/* 释义区域 */
+.meaning-section{background:var(--card);border-radius:12px;padding:20px;margin:0 16px 16px}
+.meaning-section .pos{font-size:13px;color:var(--accent);margin-bottom:8px;font-weight:600}
+.meaning-section .meaning{font-size:16px;color:var(--text);line-height:1.8}
+.meaning-section .meaning .num{display:inline-block;width:18px;height:18px;background:var(--accent);color:#fff;border-radius:50%;font-size:11px;text-align:center;line-height:18px;margin-right:6px}
+.meaning-section .meaning .freq{color:var(--text2);font-size:12px;margin-left:8px}
+
+/* 例句区域 */
+.example-section{background:var(--card);border-radius:12px;padding:20px;margin:0 16px 16px}
+.example-section .section-title{font-size:13px;color:var(--text2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.example-item{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.example-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.example-item .en{font-size:15px;color:var(--text);line-height:1.6;margin-bottom:6px}
+.example-item .en .highlight{color:var(--accent);font-weight:600}
+.example-item .zh{font-size:14px;color:var(--text2);line-height:1.5}
+
+/* 助记区域 */
+.tip-section{background:var(--card);border-radius:12px;padding:16px 20px;margin:0 16px 16px}
+.tip-section .section-title{font-size:13px;color:var(--text2);margin-bottom:8px}
+.tip-section .content{font-size:14px;color:var(--text)}
+
+/* 底部按钮 */
+.study-actions{position:fixed;bottom:0;left:0;width:100%;padding:16px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:12px;justify-content:center}
+.study-actions .btn{flex:1;max-width:120px;padding:14px 8px;font-size:15px;font-weight:600;border-radius:8px}
+.study-actions .btn .sub{font-size:11px;font-weight:normal;opacity:.8;display:block;margin-top:2px}
+
+/* 认识按钮 */
+.btn-know{background:var(--green)}
+/* 不确定按钮 */
+.btn-unsure{background:var(--orange)}
+/* 不认识按钮 */
+.btn-unknown{background:var(--red)}
+
+/* 显示答案按钮 */
+.reveal-btn-wrap{text-align:center;padding:20px}
+.reveal-btn-wrap .btn{padding:12px 40px;font-size:16px}
+
+/* 完成页面 */
+.complete-page{display:none;text-align:center;padding:60px 20px}
+.complete-page.show{display:block}
+.complete-page .icon{font-size:80px;margin-bottom:20px}
+.complete-page h2{font-size:24px;color:var(--green);margin-bottom:12px}
+.complete-page p{color:var(--text2);margin-bottom:30px;font-size:15px}
+.complete-page .btn{padding:12px 40px}
+
+/* 列表页 */
+.search-box{margin-bottom:16px}
+.search-box input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px}
+.search-box input::placeholder{color:var(--text2)}
+.pagination{display:flex;justify-content:center;align-items:center;gap:12px;margin:16px 0;flex-wrap:wrap}
+.pagination .btn{padding:6px 14px;font-size:13px}
+.page-info{color:var(--text2);font-size:14px}
+
+.confirm-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:200;justify-content:center;align-items:center}
+.confirm-box{background:var(--bg2);border-radius:12px;padding:24px;text-align:center;max-width:300px}
+.confirm-box p{margin-bottom:16px;font-size:15px}
+.confirm-box .btns{display:flex;gap:10px;justify-content:center}
+
+@media(max-width:500px){
+.app{padding:12px}
+.stats{flex-wrap:wrap;gap:10px}
+.word-card .word-main{font-size:36px}
+.word-card{padding:30px 16px 24px}
+.meaning-section,.example-section,.tip-section{margin:0 12px 12px;padding:16px}
+.study-actions{padding:12px;gap:8px}
+.study-actions .btn{max-width:none;font-size:14px;padding:12px 4px}
+.btn{padding:6px 12px}
+.tab{padding:8px 14px;font-size:14px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="mainView">
+<header>
+<h1>单词背诵工具</h1>
+<button class="btn btn-outline" onclick="openAddModal()">+ 添加单词</button>
+</header>
+<div class="tabs">
+<div class="tab active" data-cat="考研" onclick="switchTab('考研')">考研词汇</div>
+<div class="tab" data-cat="涂层" onclick="switchTab('涂层')">涂层专业</div>
+</div>
+<div class="stats">
+<div class="stat-item">今日复习: <span id="todayCount">0</span>个</div>
+<div class="stat-item">待学习: <span id="newCount">0</span>个</div>
+<div class="stat-item">已掌握: <span id="masteredCount">0</span>个</div>
+<div class="stat-item">总词汇: <span id="totalCount">0</span>个</div>
+</div>
+<div class="search-box">
+<input type="text" id="searchInput" placeholder="搜索单词..." oninput="handleSearch(this.value)">
+</div>
+<div class="review-btn-wrap">
+<button class="btn learn-btn" onclick="startLearn()">开始学习</button>
+<button class="btn review-btn" onclick="startReview()">开始复习</button>
+</div>
+<ul class="word-list" id="wordList"></ul>
+<div class="pagination" id="pagination" style="display:none">
+<button class="btn btn-outline btn-sm" onclick="prevPage()">上一页</button>
+<span class="page-info" id="pageInfo">第1页/共1页</span>
+<button class="btn btn-outline btn-sm" onclick="nextPage()">下一页</button>
+</div>
+</div>
+
+<!-- 学习模式 -->
+<div class="study-mode" id="learnView">
+<div class="progress-bar"><div class="fill" id="learnProgressFill"></div></div>
+<div class="study-header">
+<span class="back-btn" onclick="backToMain()">← 返回</span>
+<span class="title">学习新词</span>
+<span class="progress" id="learnProgressText">1/20</span>
+</div>
+
+<div id="learnCardArea">
+<div class="word-card">
+<div class="word-main" id="lnWord">bag</div>
+<div class="word-phonetic">
+<span id="lnIpa">美 [bæg]</span>
+<span class="speaker" onclick="playAudio()">🔊</span>
+</div>
+</div>
+
+<div class="meaning-section">
+<div class="pos">名</div>
+<div class="meaning" id="lnMeaning">
+<span class="num">①</span><span id="lnZh">袋，包</span><span class="freq">3次</span>
+</div>
+</div>
+
+<div class="example-section" id="lnExampleSection">
+<div class="section-title">例句</div>
+<div class="example-item">
+<div class="en">I will carry your <span class="highlight">bag</span>.</div>
+<div class="zh">我会给你拿包的。</div>
+</div>
+<div class="example-item" id="lnExample2">
+<div class="en">She found her <span class="highlight">bag</span> cut by a nail.</div>
+<div class="zh">她发现自己的包被钉子划破了。</div>
+</div>
+</div>
+
+<div class="tip-section" id="lnTipSection" style="display:none">
+<div class="section-title">助记</div>
+<div class="content" id="lnTip"></div>
+</div>
+</div>
+
+<div class="complete-page" id="learnComplete">
+<div class="icon">📚</div>
+<h2>学习完成！</h2>
+<p id="learnCompleteMsg">完成了 20 个新单词的学习</p>
+<button class="btn btn-green" onclick="backToMain()">返回列表</button>
+</div>
+
+<div class="study-actions" id="learnActions">
+<button class="btn btn-unknown" onclick="markUnknown()">不认识<span class="sub">今日 / 1天后</span></button>
+<button class="btn btn-unsure" onclick="markUnsure()">不确定<span class="sub">今日 / 2天后</span></button>
+<button class="btn btn-know" onclick="markKnown()">认识<span class="sub">42天后</span></button>
+</div>
+</div>
+
+<!-- 复习模式 -->
+<div class="study-mode" id="reviewView">
+<div class="progress-bar"><div class="fill" id="reviewProgressFill"></div></div>
+<div class="study-header">
+<span class="back-btn" onclick="backToMain()">← 返回</span>
+<span class="title">复习单词</span>
+<span class="progress" id="reviewProgressText">1/20</span>
+</div>
+
+<div id="reviewCardArea">
+<div class="word-card">
+<div class="word-main" id="rvWord">bag</div>
+<div class="word-phonetic">
+<span id="rvIpa">美 [bæg]</span>
+<span class="speaker" onclick="playAudio()">🔊</span>
+</div>
+</div>
+
+<div class="reveal-btn-wrap" id="revealWrap">
+<button class="btn btn-outline" onclick="revealReview()">显示释义</button>
+</div>
+
+<div id="reviewDetail" style="display:none">
+<div class="meaning-section">
+<div class="pos">名</div>
+<div class="meaning" id="rvMeaning">
+<span class="num">①</span><span id="rvZh">袋，包</span><span class="freq">3次</span>
+</div>
+</div>
+
+<div class="example-section" id="rvExampleSection">
+<div class="section-title">例句</div>
+<div class="example-item">
+<div class="en">I will carry your <span class="highlight">bag</span>.</div>
+<div class="zh">我会给你拿包的。</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="complete-page" id="reviewComplete">
+<div class="icon">🎉</div>
+<h2>复习完成！</h2>
+<p id="reviewCompleteMsg">完成了 20 个单词的复习</p>
+<button class="btn btn-green" onclick="backToMain()">返回列表</button>
+</div>
+
+<div class="study-actions" id="reviewActions" style="display:none">
+<button class="btn btn-unknown" onclick="reviewForgot()">忘记了<span class="sub">1天后</span></button>
+<button class="btn btn-unsure" onclick="reviewHard()">有点难<span class="sub">2天后</span></button>
+<button class="btn btn-know" onclick="reviewEasy()">记住了<span class="sub">4天后</span></button>
+</div>
+</div>
+
+<div class="modal-overlay" id="addModal">
+<div class="modal">
+<h2 id="modalTitle">添加单词</h2>
+<div class="form-group"><label>英文</label><input id="fEn" placeholder="如 coating"></div>
+<div class="form-group"><label>音标（可选）</label><input id="fIpa" placeholder="如 /ˈkoʊtɪŋ/"></div>
+<div class="form-group"><label>中文释义</label><input id="fZh" placeholder="如 涂料/涂层"></div>
+<div class="form-group"><label>分类</label><select id="fCat">
+<option value="考研">考研词汇</option>
+<option value="涂层">涂层专业</option>
+</select></div>
+<div class="form-group"><label>例句（可选）</label><textarea id="fEx" placeholder="英文例句"></textarea></div>
+<div class="modal-btns">
+<button class="btn btn-outline" onclick="closeAddModal()">取消</button>
+<button class="btn" onclick="saveWord()">保存</button>
+</div>
+</div>
+</div>
+
+<div class="confirm-overlay" id="confirmDlg">
+<div class="confirm-box">
+<p id="confirmMsg">确认删除？</p>
+<div class="btns">
+<button class="btn btn-outline" onclick="closeConfirm()">取消</button>
+<button class="btn btn-red" onclick="doConfirm()">删除</button>
+</div>
+</div>
+</div>
+
+<script>
+const LS_KEY='vocab_app_data';
+let currentCat='考研';
+let editingId=null;
+let confirmCb=null;
+let reviewQueue=[];
+let learnQueue=[];
+let reviewIdx=0;
+let learnIdx=0;
+let currentPage=1;
+const PAGE_SIZE=100;
+let searchKeyword='';
+
+// 涂层专业词汇 (205词)
+const PRESET_COATING=[
+{en:'coating',zh:'涂料/涂层',ipa:'/ˈkoʊtɪŋ/',example:'The coating provides excellent corrosion protection.'},
+{en:'substrate',zh:'底材/基材',ipa:'/ˈsʌbstreɪt/',example:'Proper substrate preparation is critical for adhesion.'},
+{en:'adhesion',zh:'附着力',ipa:'/ədˈhiːʒn/',example:'Adhesion test must meet the specified standard.'},
+{en:'primer',zh:'底漆',ipa:'/ˈpraɪmər/',example:'Apply primer before the topcoat.'},
+{en:'topcoat',zh:'面漆',ipa:'/ˈtɑːpkoʊt/',example:'The topcoat determines the final appearance.'},
+{en:'pretreatment',zh:'前处理',ipa:'/priːˈtriːtmənt/',example:'Surface pretreatment removes contaminants.'},
+{en:'degreasing',zh:'除油',ipa:'/diːˈɡriːsɪŋ/',example:'Degreasing is the first step in pretreatment.'},
+{en:'phosphating',zh:'磷化',ipa:'/ˈfɒsfeɪtɪŋ/',example:'Phosphating creates a conversion coating on metal.'},
+{en:'film thickness',zh:'膜厚',ipa:'/fɪlm ˈθɪknəs/',example:'Film thickness must be measured at multiple points.'},
+{en:'spray gun',zh:'喷枪',ipa:'/spreɪ ɡʌn/',example:'Adjust the spray gun for proper atomization.'},
+{en:'electrostatic spray',zh:'静电喷涂',ipa:'/ɪˌlektrəˈstætɪk spreɪ/',example:'Electrostatic spray improves transfer efficiency.'},
+{en:'powder coating',zh:'粉末涂料/喷粉',ipa:'/ˈpaʊdər ˈkoʊtɪŋ/',example:'Powder coating is an environmentally friendly process.'},
+{en:'curing',zh:'固化',ipa:'/ˈkjʊrɪŋ/',example:'Curing temperature must be strictly controlled.'},
+{en:'gloss',zh:'光泽度',ipa:'/ɡlɔːs/',example:'Gloss is measured at 60° angle by standard.'},
+{en:'color difference',zh:'色差',ipa:'/ˈkʌlər ˈdɪfrəns/',example:'Color difference ΔE should be within tolerance.'},
+{en:'salt spray test',zh:'盐雾试验',ipa:'/sɔːlt spreɪ test/',example:'Salt spray test evaluates corrosion resistance.'},
+{en:'adhesion test',zh:'附着力测试',ipa:'/ədˈhiːʒn test/',example:'Cross-cut adhesion test per ISO 2409.'},
+{en:'DFT',zh:'干膜厚度',ipa:'/ˌdiː ef ˈtiː/',example:'DFT measurement ensures coating compliance.'},
+{en:'wet film thickness',zh:'湿膜厚度',ipa:'/wet fɪlm ˈθɪknəs/',example:'Wet film thickness gauge checks application quality.'},
+{en:'viscosity',zh:'粘度',ipa:'/vɪsˈkɒsəti/',example:'Viscosity affects spray application performance.'},
+{en:'solvent',zh:'溶剂',ipa:'/ˈsɑːlvənt/',example:'Solvent evaporation rate influences drying time.'},
+{en:'resin',zh:'树脂',ipa:'/ˈrezɪn/',example:'Resin type determines coating properties.'},
+{en:'pigment',zh:'颜料',ipa:'/ˈpɪɡmənt/',example:'Pigment provides color and opacity.'},
+{en:'filler',zh:'填料',ipa:'/ˈfɪlər/',example:'Filler improves mechanical properties of the coating.'},
+{en:'corrosion resistance',zh:'耐腐蚀性',ipa:'/kəˈroʊʒn rɪˈzɪstəns/',example:'Corrosion resistance is a key performance indicator.'},
+{en:'rust',zh:'锈蚀',ipa:'/rʌst/',example:'Rust must be completely removed before painting.'},
+{en:'rust prevention',zh:'防锈',ipa:'/rʌst prɪˈvenʃn/',example:'Rust prevention primer is applied first.'},
+{en:'surface roughness',zh:'表面粗糙度',ipa:'/ˈsɜːrfɪs ˈrʌfnəs/',example:'Surface roughness affects coating adhesion.'},
+{en:'baking finish',zh:'烤漆',ipa:'/ˈbeɪkɪŋ ˈfɪnɪʃ/',example:'Baking finish requires controlled oven temperature.'},
+{en:'air spray',zh:'空气喷涂',ipa:'/er spreɪ/',example:'Air spray is the most common application method.'},
+{en:'HVLP spray',zh:'高容量低压力喷涂',ipa:'/ˌeɪtʃ viː el ˈpiː spreɪ/',example:'HVLP spray reduces material waste.'},
+{en:'dry spray',zh:'干喷',ipa:'/draɪ spreɪ/',example:'Dry spray occurs when paint reaches surface dry.'},
+{en:'sags and runs',zh:'流挂',ipa:'/sæɡz ənd rʌnz/',example:'Sags and runs indicate over-application.'},
+{en:'orange peel',zh:'橘皮',ipa:'/ˈɔːrɪndʒ piːl/',example:'Orange peel is a surface texture defect.'},
+{en:'blistering',zh:'起泡',ipa:'/ˈblɪstərɪŋ/',example:'Blistering indicates moisture trapped under coating.'},
+{en:'corrosion',zh:'腐蚀',ipa:'/kəˈroʊʒn/',example:'Corrosion is the gradual destruction of materials.'},
+{en:'cathodic protection',zh:'阴极保护',ipa:'/kəˈθɒdɪk prəˈtekʃn/',example:'Cathodic protection prevents metal corrosion.'},
+{en:'anode',zh:'阳极',ipa:'/ˈænoʊd/',example:'The anode is the electrode where oxidation occurs.'},
+{en:'cathode',zh:'阴极',ipa:'/ˈkæθoʊd/',example:'The cathode is the electrode where reduction occurs.'},
+{en:'electrolyte',zh:'电解质',ipa:'/ɪˈlektrəlaɪt/',example:'Electrolyte solution conducts electric current.'},
+{en:'galvanic corrosion',zh:'电偶腐蚀',ipa:'/ɡælˈvænɪk kəˈroʊʒn/',example:'Galvanic corrosion occurs when two dissimilar metals contact.'},
+{en:'pitting corrosion',zh:'点蚀',ipa:'/ˈpɪtɪŋ kəˈroʊʒn/',example:'Pitting corrosion creates small holes in the metal surface.'},
+{en:'crevice corrosion',zh:'缝隙腐蚀',ipa:'/ˈkrevɪs kəˈroʊʒn/',example:'Crevice corrosion occurs in confined spaces.'},
+{en:'stress corrosion cracking',zh:'应力腐蚀开裂',ipa:'/stres kəˈroʊʒn ˈkrækɪŋ/',example:'Stress corrosion cracking combines tensile stress and corrosion.'},
+{en:'intergranular corrosion',zh:'晶间腐蚀',ipa:'/ˌɪntərˈɡrænjələr kəˈroʊʒn/',example:'Intergranular corrosion attacks grain boundaries.'},
+{en:'uniform corrosion',zh:'均匀腐蚀',ipa:'/ˈjuːnɪfɔːrm kəˈroʊʒn/',example:'Uniform corrosion occurs evenly over the surface.'},
+{en:'filiform corrosion',zh:'丝状腐蚀',ipa:'/ˈfɪlɪfɔːrm kəˈroʊʒn/',example:'Filiform corrosion appears as thread-like filaments.'},
+{en:'erosion corrosion',zh:'磨蚀腐蚀',ipa:'/ɪˈroʊʒn kəˈroʊʒn/',example:'Erosion corrosion is caused by mechanical wear and corrosion.'},
+{en:'corrosion rate',zh:'腐蚀速率',ipa:'/kəˈroʊʒn reɪt/',example:'Corrosion rate is measured in mils per year.'},
+{en:'corrosion inhibitor',zh:'缓蚀剂',ipa:'/kəˈroʊʒn ɪnˈhɪbɪtər/',example:'Corrosion inhibitor slows down the corrosion process.'},
+{en:'coating inspector',zh:'涂层检测员',ipa:'/ˈkoʊtɪŋ ɪnˈspektər/',example:'The coating inspector checks application quality.'},
+{en:'surface preparation',zh:'表面处理',ipa:'/ˈsɜːrfɪs ˌprepəˈreɪʃn/',example:'Surface preparation is critical for coating adhesion.'},
+{en:'abrasive blast cleaning',zh:'磨料喷射清理',ipa:'/əˈbreɪsɪv blæst ˈkliːnɪŋ/',example:'Abrasive blast cleaning removes rust and mill scale.'},
+{en:'SSPC',zh:'美国钢结构涂装协会',ipa:'/ˌes es piː ˈsiː/',example:'SSPC sets standards for protective coatings.'},
+{en:'NACE',zh:'美国腐蚀工程师协会',ipa:'/neɪs/',example:'NACE provides corrosion control standards.'},
+{en:'ISO 8501',zh:'涂装前钢材表面粗糙度标准',ipa:'/ˌaɪ es oʊ ˈeɪt faɪv oʊ ˈwʌn/',example:'ISO 8501 defines surface preparation grades.'},
+{en:'Sa 2.5',zh:'非常彻底的喷射清理',ipa:'/es eɪ tuː ˈpɔɪnt faɪv/',example:'Sa 2.5 is a near-white blast cleaning standard.'},
+{en:'Sa 3',zh:'表面清理如白金属',ipa:'/es eɪ θriː/',example:'Sa 3 is a white metal blast cleaning standard.'},
+{en:'anchor profile',zh:'锚纹深度',ipa:'/ˈæŋkər ˈproʊfaɪl/',example:'Anchor profile ensures mechanical adhesion.'},
+{en:'blast profile',zh:'喷砂轮廓',ipa:'/blæst ˈproʊfaɪl/',example:'Blast profile is measured with replica tape.'},
+{en:'mill scale',zh:'轧制氧化皮',ipa:'/mɪl skeɪl/',example:'Mill scale must be removed before coating.'},
+{en:'dew point',zh:'露点',ipa:'/duː pɔɪnt/',example:'Surface temperature must be above dew point.'},
+{en:'relative humidity',zh:'相对湿度',ipa:'/ˈrelətɪv hjuːˈmɪdəti/',example:'Relative humidity affects coating application.'},
+{en:'dry film thickness',zh:'干膜厚度(DFT)',ipa:'/draɪ fɪlm ˈθɪknəs/',example:'Dry film thickness is measured after curing.'},
+{en:'wet film thickness',zh:'湿膜厚度(WFT)',ipa:'/wet fɪlm ˈθɪknəs/',example:'Wet film thickness predicts dry film thickness.'},
+{en:'coating system',zh:'涂层系统',ipa:'/ˈkoʊtɪŋ ˈsɪstəm/',example:'A coating system includes primer and topcoat.'},
+{en:'prime coat',zh:'底漆层',ipa:'/praɪm koʊt/',example:'Prime coat provides corrosion protection.'},
+{en:'intermediate coat',zh:'中间漆层',ipa:'/ˌɪntərˈmiːdiət koʊt/',example:'Intermediate coat builds film thickness.'},
+{en:'finish coat',zh:'面漆层',ipa:'/ˈfɪnɪʃ koʊt/',example:'Finish coat provides color and gloss.'},
+{en:'stripe coating',zh:'预涂/加强涂',ipa:'/straɪp ˈkoʊtɪŋ/',example:'Stripe coating covers edges and welds.'},
+{en:'touch-up',zh:'修补',ipa:'/ˈtʌtʃ ʌp/',example:'Touch-up repairs damaged coating areas.'},
+{en:'holiday',zh:'漏涂点',ipa:'/ˈhɒlədeɪ/',example:'Holiday is a discontinuity in the coating.'},
+{en:'holiday detector',zh:'漏涂点检测仪',ipa:'/ˈhɒlədeɪ dɪˈtektər/',example:'Holiday detector finds coating defects.'},
+{en:'cohesive failure',zh:'内聚失效',ipa:'/koʊˈhiːsɪv ˈfeɪljər/',example:'Cohesive failure occurs within the coating layer.'},
+{en:'adhesive failure',zh:'附着失效',ipa:'/ədˈhiːsɪv ˈfeɪljər/',example:'Adhesive failure occurs at the substrate interface.'},
+{en:'pull-off test',zh:'拉脱试验',ipa:'/pʊl ɔːf test/',example:'Pull-off test measures adhesion strength.'},
+{en:'cross-cut test',zh:'划格试验',ipa:'/krɔːs kʌt test/',example:'Cross-cut test evaluates coating adhesion.'},
+{en:'impact resistance',zh:'耐冲击性',ipa:'/ˈɪmpækt rɪˈzɪstəns/',example:'Impact resistance prevents mechanical damage.'},
+{en:'flexibility',zh:'柔韧性',ipa:'/ˌfleksəˈbɪləti/',example:'Flexibility allows coating to bend without cracking.'},
+{en:'abrasion resistance',zh:'耐磨性',ipa:'/əˈbreɪʒn rɪˈzɪstəns/',example:'Abrasion resistance prevents surface wear.'},
+{en:'chemical resistance',zh:'耐化学性',ipa:'/ˈkemɪkl rɪˈzɪstəns/',example:'Chemical resistance protects against solvents.'},
+{en:'UV resistance',zh:'耐紫外线',ipa:'/ˌjuː ˈviː rɪˈzɪstəns/',example:'UV resistance prevents coating degradation.'},
+{en:'water resistance',zh:'耐水性',ipa:'/ˈwɔːtər rɪˈzɪstəns/',example:'Water resistance prevents moisture damage.'},
+{en:'cathodic disbondment',zh:'阴极剥离',ipa:'/kəˈθɒdɪk dɪsˈbɒndmənt/',example:'Cathodic disbondment occurs under cathodic protection.'},
+{en:'osmotic blistering',zh:'渗透起泡',ipa:'/ɒzˈmɒtɪk ˈblɪstərɪŋ/',example:'Osmotic blistering is caused by soluble salts.'},
+{en:'underfilm corrosion',zh:'膜下腐蚀',ipa:'/ˌʌndərˈfɪlm kəˈroʊʒn/',example:'Underfilm corrosion spreads beneath the coating.'},
+{en:'solvent entrapment',zh:'溶剂截留',ipa:'/ˈsɑːlvənt ɪnˈtræpmənt/',example:'Solvent entrapment causes blistering and poor adhesion.'},
+{en:'amine blush',zh:'胺霜',ipa:'/ˈæmiːn blʌʃ/',example:'Amine blush appears on epoxy coatings.'},
+{en:'chalking',zh:'粉化',ipa:'/ˈtʃɔːkɪŋ/',example:'Chalking is the degradation of coating surface.'},
+{en:'checking',zh:'细裂',ipa:'/ˈtʃekɪŋ/',example:'Checking is fine cracking in the coating.'},
+{en:'cracking',zh:'开裂',ipa:'/ˈkrækɪŋ/',example:'Cracking indicates coating failure.'},
+{en:'delamination',zh:'分层',ipa:'/diˌlæmɪˈneɪʃn/',example:'Delamination is separation between coating layers.'},
+{en:'peeling',zh:'剥落',ipa:'/ˈpiːlɪŋ/',example:'Peeling is the flaking of coating from substrate.'},
+{en:'flaking',zh:'片落',ipa:'/ˈfleɪkɪŋ/',example:'Flaking occurs when coating loses adhesion.'},
+{en:'rust grade',zh:'锈蚀等级',ipa:'/rʌst ɡreɪd/',example:'Rust grade determines surface preparation required.'},
+{en:'coating condition',zh:'涂层状况',ipa:'/ˈkoʊtɪŋ kənˈdɪʃn/',example:'Coating condition is assessed during inspection.'},
+{en:'specification',zh:'规范',ipa:'/ˌspesɪfɪˈkeɪʃn/',example:'Specification defines coating requirements.'},
+{en:'inspection',zh:'检测',ipa:'/ɪnˈspekʃn/',example:'Inspection ensures coating quality compliance.'},
+{en:'quality control',zh:'质量控制(QC)',ipa:'/ˈkwɒləti kənˈtroʊl/',example:'Quality control monitors coating application.'},
+{en:'quality assurance',zh:'质量保证(QA)',ipa:'/ˈkwɒləti əˈʃʊrəns/',example:'Quality assurance ensures coating performance.'},
+{en:'non-conformance',zh:'不合格',ipa:'/nɒn kənˈfɔːrməns/',example:'Non-conformance requires corrective action.'},
+{en:'corrective action',zh:'纠正措施',ipa:'/kəˈrektɪv ˈækʃn/',example:'Corrective action fixes coating defects.'},
+{en:'coating applicator',zh:'涂装工',ipa:'/ˈkoʊtɪŋ ˈæplɪkeɪtər/',example:'Coating applicator applies paint to surfaces.'},
+{en:'ambient temperature',zh:'环境温度',ipa:'/ˈæmbiənt ˈtemprətʃər/',example:'Ambient temperature affects coating cure.'},
+{en:'surface temperature',zh:'表面温度',ipa:'/ˈsɜːrfɪs ˈtemprətʃər/',example:'Surface temperature must be above dew point.'},
+{en:'pot life',zh:'适用期',ipa:'/pɒt laɪf/',example:'Pot life is the usable time after mixing.'},
+{en:'induction time',zh:'熟化时间',ipa:'/ɪnˈdʌkʃn taɪm/',example:'Induction time allows chemical reaction.'},
+{en:'mixing ratio',zh:'混合比',ipa:'/ˈmɪksɪŋ ˈreɪʃioʊ/',example:'Mixing ratio must be followed precisely.'},
+{en:'overspray',zh:'过喷',ipa:'/ˈoʊvərspreɪ/',example:'Overspray is wasted coating material.'},
+{en:'sagging',zh:'流挂',ipa:'/ˈsæɡɪŋ/',example:'Sagging is downward flow of wet coating.'},
+{en:'pinhole',zh:'针孔',ipa:'/ˈpɪnhoʊl/',example:'Pinhole is a tiny hole in the coating.'},
+{en:'wrinkle',zh:'皱纹',ipa:'/ˈrɪŋkl/',example:'Wrinkle is a surface irregularity.'},
+{en:'fish eye',zh:'鱼眼',ipa:'/fɪʃ aɪ/',example:'Fish eye is a crater-like coating defect.'},
+{en:'cobwebbing',zh:'蛛网',ipa:'/ˈkɒbwebɪŋ/',example:'Cobwebbing is stringy coating appearance.'},
+{en:'solvent popping',zh:'溶剂爆孔',ipa:'/ˈsɑːlvənt ˈpɒpɪŋ/',example:'Solvent popping is caused by trapped solvents.'},
+{en:'mud cracking',zh:'泥裂',ipa:'/mʌd ˈkrækɪŋ/',example:'Mud cracking resembles dried mud patterns.'},
+{en:'galvanic series',zh:'电偶序',ipa:'/ɡælˈvænɪk ˈsɪəriːz/',example:'Galvanic series ranks metals by reactivity.'},
+{en:'reference electrode',zh:'参比电极',ipa:'/ˈrefrəns ɪˈlektroʊd/',example:'Reference electrode measures potential.'},
+{en:'sacrificial anode',zh:'牺牲阳极',ipa:'/ˈsækrɪfɪʃl ˈænoʊd/',example:'Sacrificial anode corrodes to protect steel.'},
+{en:'impressed current',zh:'外加电流',ipa:'/ɪmˈprest ˈkʌrənt/',example:'Impressed current provides cathodic protection.'},
+{en:'coating thickness gauge',zh:'涂层测厚仪',ipa:'/ˈkoʊtɪŋ ˈθɪknəs ɡeɪdʒ/',example:'Coating thickness gauge measures DFT.'},
+{en:'replica tape',zh:'复制品胶带(粗糙度)',ipa:'/ˈreplɪkə teɪp/',example:'Replica tape measures surface profile.'},
+{en:'surface profile',zh:'表面轮廓',ipa:'/ˈsɜːrfɪs ˈproʊfaɪl/',example:'Surface profile ensures coating adhesion.'},
+{en:'comparator',zh:'比较样块',ipa:'/kəmˈpærətər/',example:'Comparator assesses surface preparation.'},
+{en:'steel grit',zh:'钢砂',ipa:'/stiːl ɡrɪt/',example:'Steel grit is an angular abrasive.'},
+{en:'steel shot',zh:'钢丸',ipa:'/stiːl ʃɒt/',example:'Steel shot is a round abrasive.'},
+{en:'garnet',zh:'石榴石(磨料)',ipa:'/ˈɡɑːrnɪt/',example:'Garnet is a natural abrasive mineral.'},
+{en:'copper slag',zh:'铜渣(磨料)',ipa:'/ˈkɒpər slæɡ/',example:'Copper slag is a byproduct abrasive.'},
+{en:'coal slag',zh:'煤渣(磨料)',ipa:'/koʊl slæɡ/',example:'Coal slag is an inexpensive abrasive.'},
+{en:'vacuum blasting',zh:'真空喷砂',ipa:'/ˈvækjuːm ˈblæstɪŋ/',example:'Vacuum blasting collects dust and debris.'},
+{en:'water jetting',zh:'水喷射',ipa:'/ˈwɔːtər ˈdʒetɪŋ/',example:'Water jetting cleans without abrasives.'},
+{en:'power tool cleaning',zh:'动力工具清理',ipa:'/ˈpaʊər tuːl ˈkliːnɪŋ/',example:'Power tool cleaning removes loose material.'},
+{en:'hand tool cleaning',zh:'手工工具清理',ipa:'/hænd tuːl ˈkliːnɪŋ/',example:'Hand tool cleaning is the minimum preparation.'},
+{en:'weld splatter',zh:'焊接飞溅',ipa:'/weld ˈsplætər/',example:'Weld splatter must be removed before coating.'},
+{en:'sharp edge',zh:'锐边',ipa:'/ʃɑːrp edʒ/',example:'Sharp edges require stripe coating.'},
+{en:'coating manufacturer',zh:'涂料制造商',ipa:'/ˈkoʊtɪŋ ˌmænjuˈfæktʃərər/',example:'Coating manufacturer provides product data.'},
+{en:'technical data sheet',zh:'技术数据表(TDS)',ipa:'/ˈteknɪkl ˈdeɪtə ʃiːt/',example:'TDS provides coating specifications.'},
+{en:'material safety data sheet',zh:'材料安全数据表(MSDS)',ipa:'/məˈtɪriəl ˈseɪfti ˈdeɪtə ʃiːt/',example:'MSDS provides safety information.'},
+{en:'batch number',zh:'批号',ipa:'/bætʃ ˈnʌmbər/',example:'Batch number tracks coating production.'},
+{en:'shelf life',zh:'保质期',ipa:'/ʃelf laɪf/',example:'Shelf life is the storage time limit.'},
+{en:'storage condition',zh:'储存条件',ipa:'/ˈstɔːrɪdʒ kənˈdɪʃn/',example:'Storage condition affects coating quality.'},
+{en:'curing agent',zh:'固化剂',ipa:'/ˈkjʊrɪŋ ˈeɪdʒənt/',example:'Curing agent reacts with resin to harden.'},
+{en:'epoxy',zh:'环氧',ipa:'/ɪˈpɒksi/',example:'Epoxy provides excellent chemical resistance.'},
+{en:'polyurethane',zh:'聚氨酯',ipa:'/ˌpɒliˈjʊərəθeɪn/',example:'Polyurethane offers good UV resistance.'},
+{en:'alkyd',zh:'醇酸',ipa:'/ˈælkɪd/',example:'Alkyd is a common oil-based coating.'},
+{en:'acrylic',zh:'丙烯酸',ipa:'/əˈkrɪlɪk/',example:'Acrylic provides good weather resistance.'},
+{en:'silicone',zh:'有机硅',ipa:'/ˈsɪlɪkoʊn/',example:'Silicone offers high temperature resistance.'},
+{en:'fluoropolymer',zh:'含氟聚合物',ipa:'/ˌflʊərəˈpɒlɪmər/',example:'Fluoropolymer provides superior durability.'},
+{en:'zinc-rich primer',zh:'富锌底漆',ipa:'/zɪŋk rɪtʃ ˈpraɪmər/',example:'Zinc-rich primer provides sacrificial protection.'},
+{en:'inorganic zinc',zh:'无机富锌',ipa:'/ˌɪnɔːrˈɡænɪk zɪŋk/',example:'Inorganic zinc silicate offers high heat resistance.'},
+{en:'organic zinc',zh:'有机富锌',ipa:'/ɔːrˈɡænɪk zɪŋk/',example:'Organic zinc epoxy is easier to apply.'},
+{en:'intumescent coating',zh:'膨胀型防火涂料',ipa:'/ɪnˈtjuːmesnt ˈkoʊtɪŋ/',example:'Intumescent coating expands when heated.'},
+{en:'thermal spray',zh:'热喷涂',ipa:'/ˈθɜːrml spreɪ/',example:'Thermal spray applies molten metal coatings.'},
+{en:'zinc spraying',zh:'喷锌',ipa:'/zɪŋk ˈspreɪɪŋ/',example:'Zinc spraying provides corrosion protection.'},
+{en:'aluminum spraying',zh:'喷铝',ipa:'/ˌæljəˈmɪniəm ˈspreɪɪŋ/',example:'Aluminum spraying protects steel in high heat.'},
+{en:'seal coat',zh:'封闭涂层',ipa:'/siːl koʊt/',example:'Seal coat prevents topcoat absorption.'},
+{en:'leading edge',zh:'迎风边/前缘',ipa:'/ˈliːdɪŋ edʒ/',example:'Leading edge requires extra coating protection.'},
+{en:'complex geometry',zh:'复杂几何形状',ipa:'/ˈkɒmpleks dʒiˈɒmətri/',example:'Complex geometry is difficult to coat uniformly.'},
+{en:'coating compatibility',zh:'涂层配套性',ipa:'/ˈkoʊtɪŋ kəmˌpætəˈbɪləti/',example:'Coating compatibility ensures layer adhesion.'},
+{en:'recoat interval',zh:'重涂间隔',ipa:'/riːˈkoʊt ˈɪntərvl/',example:'Recoat interval is the time between coats.'},
+{en:'drying time',zh:'干燥时间',ipa:'/ˈdraɪɪŋ taɪm/',example:'Drying time varies with temperature.'},
+{en:'cure time',zh:'固化时间',ipa:'/kjʊr taɪm/',example:'Cure time is longer than drying time.'},
+{en:'tack free',zh:'表干',ipa:'/tæk friː/',example:'Tack free means surface is no longer sticky.'},
+{en:'dry to touch',zh:'指触干',ipa:'/draɪ tuː tʌtʃ/',example:'Dry to touch allows light handling.'},
+{en:'dry to handle',zh:'可搬运干',ipa:'/draɪ tuː ˈhændl/',example:'Dry to handle allows careful moving.'},
+{en:'dry to recoat',zh:'可重涂干',ipa:'/draɪ tuː riːˈkoʊt/',example:'Dry to recoat allows next coat application.'},
+{en:'full cure',zh:'完全固化',ipa:'/fʊl kjʊr/',example:'Full cure achieves maximum properties.'},
+{en:'solvent-borne coating',zh:'溶剂型涂料',ipa:'/ˈsɑːlvənt bɔːrn ˈkoʊtɪŋ/',example:'Solvent-borne coating uses organic solvents.'},
+{en:'water-borne coating',zh:'水性涂料',ipa:'/ˈwɔːtər bɔːrn ˈkoʊtɪŋ/',example:'Water-borne coating reduces VOC emissions.'},
+{en:'high solids coating',zh:'高固体分涂料',ipa:'/haɪ ˈsɒlɪdz ˈkoʊtɪŋ/',example:'High solids coating has less solvent.'},
+{en:'volume solids',zh:'体积固体分',ipa:'/ˈvɒljuːm ˈsɒlɪdz/',example:'Volume solids indicates coating coverage.'},
+{en:'flash rust',zh:'闪锈',ipa:'/flæʃ rʌst/',example:'Flash rust forms quickly on wet steel.'},
+{en:'flash point',zh:'闪点',ipa:'/flæʃ pɔɪnt/',example:'Flash point indicates fire hazard.'}
+];
+
+// 考研词汇
+const PRESET_EXAM=[
+{en:'annex',zh:'附件；吞并',ipa:'/ˈæneks/'},
+{en:'preliminary',zh:'初步的，预备的',ipa:'/prɪˈlɪmɪneri/'},
+{en:'subordinate',zh:'下级的；使从属于',ipa:'/səˈbɔːrdɪnət/'},
+{en:'initiative',zh:'主动权；倡议',ipa:'/ɪˈnɪʃətɪv/'},
+{en:'hypothesis',zh:'假设，假说',ipa:'/haɪˈpɑːθəsɪs/'},
+{en:'phenomenon',zh:'现象',ipa:'/fəˈnɑːmɪnɑːn/'},
+{en:'factor',zh:'因素',ipa:'/ˈfæktər/'},
+{en:'methodology',zh:'方法论',ipa:'/ˌmeθəˈdɑːlədʒi/'},
+{en:'empirical',zh:'经验主义的',ipa:'/ɪmˈpɪrɪkl/'},
+{en:'cumulative',zh:'累积的',ipa:'/ˈkjuːmjəleɪtɪv/'},
+{en:'inherent',zh:'固有的',ipa:'/ɪnˈhɪrənt/'},
+{en:'obscure',zh:'模糊的；使模糊',ipa:'/əbˈskjʊr/'},
+{en:'profound',zh:'深刻的',ipa:'/prəˈfaʊnd/'},
+{en:'coordinate',zh:'使协调',ipa:'/koʊˈɔːrdɪneɪt/'},
+{en:'integrate',zh:'使成整体',ipa:'/ˈɪntɪɡreɪt/'},
+{en:'justify',zh:'证明…正当',ipa:'/ˈdʒʌstɪfaɪ/'},
+{en:'facilitate',zh:'使容易',ipa:'/fəˈsɪlɪteɪt/'},
+{en:'verify',zh:'核实',ipa:'/ˈverɪfaɪ/'},
+{en:'assess',zh:'评估',ipa:'/əˈses/'},
+{en:'induce',zh:'引起；诱使',ipa:'/ɪnˈduːs/'},
+{en:'inhibit',zh:'抑制',ipa:'/ɪnˈhɪbɪt/'},
+{en:'deduce',zh:'推论',ipa:'/dɪˈduːs/'},
+{en:'formulate',zh:'规划；系统阐述',ipa:'/ˈfɔːrmjuleɪt/'},
+{en:'approximate',zh:'近似的',ipa:'/əˈprɑːksɪmət/'},
+{en:'simulate',zh:'模拟',ipa:'/ˈsɪmjuleɪt/'},
+{en:'alleviate',zh:'减轻',ipa:'/əˈliːvieɪt/'},
+{en:'advocate',zh:'提倡',ipa:'/ˈædvəkeɪt/'},
+{en:'aggregate',zh:'聚集；总计',ipa:'/ˈæɡrɪɡət/'},
+{en:'allocate',zh:'分配',ipa:'/ˈæləkeɪt/'},
+{en:'alter',zh:'改变',ipa:'/ˈɔːltər/'},
+{en:'anticipate',zh:'预期',ipa:'/ænˈtɪsɪpeɪt/'},
+{en:'articulate',zh:'清晰地表达',ipa:'/ɑːrˈtɪkjuleɪt/'},
+{en:'compensate',zh:'补偿',ipa:'/ˈkɒmpenseɪt/'},
+{en:'complement',zh:'补充',ipa:'/ˈkɒmplɪmənt/'},
+{en:'confer',zh:'授予；协商',ipa:'/kənˈfɜːr/'},
+{en:'configure',zh:'配置',ipa:'/kənˈfɪɡjər/'},
+{en:'confront',zh:'面对',ipa:'/kənˈfrʌnt/'},
+{en:'constitute',zh:'构成',ipa:'/ˈkɒnstɪtuːt/'},
+{en:'constrain',zh:'约束',ipa:'/kənˈstreɪn/'},
+{en:'contemporary',zh:'当代的',ipa:'/kənˈtempəreri/'},
+{en:'contradict',zh:'矛盾',ipa:'/ˌkɒntrəˈdɪkt/'},
+{en:'counterpart',zh:'对应物',ipa:'/ˈkaʊntərpɑːrt/'},
+{en:'crucial',zh:'关键的',ipa:'/ˈkruːʃl/'},
+{en:'deploy',zh:'部署',ipa:'/dɪˈplɔɪ/'},
+{en:'deviate',zh:'偏离',ipa:'/ˈdiːvieɪt/'},
+{en:'diminish',zh:'减少',ipa:'/dɪˈmɪnɪʃ/'},
+{en:'dissipate',zh:'消散',ipa:'/ˈdɪsɪpeɪt/'},
+{en:'divergent',zh:'分化的',ipa:'/daɪˈvɜːrdʒənt/'},
+{en:'domain',zh:'领域',ipa:'/doʊˈmeɪn/'},
+{en:'dominate',zh:'支配',ipa:'/ˈdɒmɪneɪt/'}
+];
+
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function daysAfter(d,n){const dt=new Date(d);dt.setDate(dt.getDate()+n);return dt.toISOString().slice(0,10)}
+
+function initData(){
+  const VERSION = '5.0';
+  const verKey = 'vocab_app_version';
+  const savedVer = localStorage.getItem(verKey);
+  if(savedVer !== VERSION){
+    localStorage.removeItem(LS_KEY);
+    localStorage.setItem(verKey, VERSION);
+  }
+  let d=localStorage.getItem(LS_KEY);
+  if(!d){
+    const words=[];
+    const today=todayStr();
+    PRESET_COATING.forEach((w,i)=>{words.push({id:genId(),en:w.en,zh:w.zh,ipa:w.ipa||'',cat:'涂层',example:w.example||'',nextReview:today,interval:1,easeFactor:2.5,repetitions:0,learned:false})});
+    PRESET_EXAM.forEach((w,i)=>{words.push({id:genId(),en:w.en,zh:w.zh,ipa:w.ipa||'',cat:'考研',example:'',nextReview:daysAfter(today,i%7+1),interval:1,easeFactor:2.5,repetitions:0,learned:false})});
+    saveData(words);
+    return words;
+  }
+  return JSON.parse(d);
+}
+
+function saveData(words){localStorage.setItem(LS_KEY,JSON.stringify(words))}
+function getWords(){return initData()}
+
+function switchTab(cat){
+  currentCat=cat;
+  currentPage=1;
+  searchKeyword='';
+  document.getElementById('searchInput').value='';
+  document.querySelectorAll('.tab').forEach(t=>{t.classList.toggle('active',t.dataset.cat===cat)});
+  renderList();
+  updateStats();
+}
+
+function updateStats(){
+  const words=getWords();
+  const catWords=words.filter(w=>w.cat===currentCat);
+  const today=todayStr();
+  const due=catWords.filter(w=>w.nextReview<=today&&w.learned);
+  const newWords=catWords.filter(w=>!w.learned);
+  const mastered=catWords.filter(w=>w.repetitions>=5);
+  document.getElementById('todayCount').textContent=due.length;
+  document.getElementById('newCount').textContent=newWords.length;
+  document.getElementById('masteredCount').textContent=mastered.length;
+  document.getElementById('totalCount').textContent=catWords.length;
+}
+
+function getFilteredWords(){
+  const words=getWords();
+  let catWords=words.filter(w=>w.cat===currentCat);
+  if(searchKeyword){
+    const kw=searchKeyword.toLowerCase();
+    catWords=catWords.filter(w=>w.en.toLowerCase().includes(kw)||w.zh.includes(kw));
+  }
+  return catWords;
+}
+
+function renderList(){
+  const allWords=getFilteredWords();
+  const totalWords=allWords.length;
+  const totalPages=Math.max(1,Math.ceil(totalWords/PAGE_SIZE));
+  if(currentPage>totalPages)currentPage=totalPages;
+  const startIdx=(currentPage-1)*PAGE_SIZE;
+  const endIdx=Math.min(startIdx+PAGE_SIZE,totalWords);
+  const pageWords=allWords.slice(startIdx,endIdx);
+  const list=document.getElementById('wordList');
+  list.innerHTML='';
+  if(totalWords===0){
+    list.innerHTML='<li style="text-align:center;padding:20px;color:var(--text2)">没有找到单词</li>';
+  }
+  pageWords.forEach(w=>{
+    const li=document.createElement('li');
+    li.className='word-item';
+    const ipaHtml=w.ipa?'<span class="word-ipa">'+w.ipa+'</span>':'';
+    const statusBadge=w.learned?'':'<span style="color:var(--green);margin-left:8px;font-size:12px">[新]</span>';
+    li.innerHTML='<div class="word-header"><span class="word-en">'+w.en+ipaHtml+statusBadge+'</span><span class="word-meta">下次复习: '+w.nextReview+' | 复习'+w.repetitions+'次</span></div><div class="word-detail" id="d_'+w.id+'"><div class="zh">'+w.zh+'</div>'+(w.example?'<div class="example">'+w.example+'</div>':'')+'<div class="word-actions"><button class="btn btn-sm btn-outline" onclick="openEditModal(\''+w.id+'\')">编辑</button><button class="btn btn-sm btn-red" onclick="askDelete(\''+w.id+'\')">删除</button></div></div>';
+    li.querySelector('.word-header').addEventListener('click',function(){
+      const det=document.getElementById('d_'+w.id);
+      det.classList.toggle('show');
+    });
+    list.appendChild(li);
+  });
+  updatePagination(totalWords,totalPages);
+  updateStats();
+}
+
+function updatePagination(totalWords,totalPages){
+  const pagination=document.getElementById('pagination');
+  const pageInfo=document.getElementById('pageInfo');
+  if(totalWords>PAGE_SIZE){
+    pagination.style.display='flex';
+    pageInfo.textContent='第'+currentPage+'页/共'+totalPages+'页 (共'+totalWords+'词)';
+  }else{
+    pagination.style.display='none';
+  }
+}
+
+function prevPage(){
+  if(currentPage>1){
+    currentPage--;
+    renderList();
+  }
+}
+
+function nextPage(){
+  const totalWords=getFilteredWords().length;
+  const totalPages=Math.ceil(totalWords/PAGE_SIZE);
+  if(currentPage<totalPages){
+    currentPage++;
+    renderList();
+  }
+}
+
+function handleSearch(val){
+  searchKeyword=val.trim();
+  currentPage=1;
+  renderList();
+}
+
+function openAddModal(){
+  editingId=null;
+  document.getElementById('modalTitle').textContent='添加单词';
+  document.getElementById('fEn').value='';
+  document.getElementById('fIpa').value='';
+  document.getElementById('fZh').value='';
+  document.getElementById('fCat').value=currentCat;
+  document.getElementById('fEx').value='';
+  document.getElementById('addModal').classList.add('show');
+}
+
+function openEditModal(id){
+  const words=getWords();
+  const w=words.find(x=>x.id===id);
+  if(!w)return;
+  editingId=id;
+  document.getElementById('modalTitle').textContent='编辑单词';
+  document.getElementById('fEn').value=w.en;
+  document.getElementById('fIpa').value=w.ipa||'';
+  document.getElementById('fZh').value=w.zh;
+  document.getElementById('fCat').value=w.cat;
+  document.getElementById('fEx').value=w.example||'';
+  document.getElementById('addModal').classList.add('show');
+}
+
+function closeAddModal(){document.getElementById('addModal').classList.remove('show')}
+
+function saveWord(){
+  const en=document.getElementById('fEn').value.trim();
+  const ipa=document.getElementById('fIpa').value.trim();
+  const zh=document.getElementById('fZh').value.trim();
+  const cat=document.getElementById('fCat').value;
+  const ex=document.getElementById('fEx').value.trim();
+  if(!en||!zh)return;
+  let words=getWords();
+  if(editingId){
+    const w=words.find(x=>x.id===editingId);
+    if(w){w.en=en;w.ipa=ipa;w.zh=zh;w.cat=cat;w.example=ex}
+  }else{
+    words.push({id:genId(),en:en,ipa:ipa,zh:zh,cat:cat,example:ex,nextReview:todayStr(),interval:1,easeFactor:2.5,repetitions:0,learned:false});
+  }
+  saveData(words);
+  closeAddModal();
+  if(currentCat!==cat)switchTab(cat);
+  else renderList();
+}
+
+function askDelete(id){
+  confirmCb=function(){
+    let words=getWords();
+    words=words.filter(w=>w.id!==id);
+    saveData(words);
+    renderList();
+  };
+  document.getElementById('confirmMsg').textContent='确认删除这个单词？';
+  document.getElementById('confirmDlg').classList.add('show');
+}
+function closeConfirm(){document.getElementById('confirmDlg').classList.remove('show');confirmCb=null}
+function doConfirm(){if(confirmCb)confirmCb();closeConfirm()}
+
+// 语音播放
+function playAudio(){
+  const word=currentMode==='learn'?learnQueue[learnIdx].en:reviewQueue[reviewIdx].en;
+  if('speechSynthesis' in window){
+    const utterance=new SpeechSynthesisUtterance(word);
+    utterance.lang='en-US';
+    utterance.rate=0.8;
+    speechSynthesis.speak(utterance);
+  }
+}
+
+let currentMode='';
+
+// 学习模式
+function startLearn(){
+  const words=getWords();
+  learnQueue=words.filter(w=>w.cat===currentCat&&!w.learned);
+  if(!learnQueue.length){alert('当前分类没有新单词需要学习！');return}
+  currentMode='learn';
+  learnIdx=0;
+  document.getElementById('mainView').style.display='none';
+  document.getElementById('learnView').classList.add('active');
+  document.getElementById('learnComplete').classList.remove('show');
+  document.getElementById('learnCardArea').style.display='';
+  document.getElementById('learnActions').style.display='flex';
+  showLearnWord();
+}
+
+function showLearnWord(){
+  const w=learnQueue[learnIdx];
+  document.getElementById('lnWord').textContent=w.en;
+  document.getElementById('lnIpa').textContent=w.ipa||'';
+  document.getElementById('lnZh').textContent=w.zh;
+  document.getElementById('learnProgressText').textContent=(learnIdx+1)+'/'+learnQueue.length;
+  const pct=((learnIdx)/learnQueue.length)*100;
+  document.getElementById('learnProgressFill').style.width=pct+'%';
+  
+  // 例句
+  const exSection=document.getElementById('lnExampleSection');
+  if(w.example){
+    exSection.style.display='';
+    const sentences=w.example.split('.').filter(s=>s.trim());
+    let html='<div class="section-title">例句</div>';
+    sentences.slice(0,2).forEach(sent=>{
+      const cleanSent=sent.trim()+'.';
+      const highlighted=cleanSent.replace(new RegExp('\\b'+w.en+'\\b','gi'),'<span class="highlight">'+w.en+'</span>');
+      html+='<div class="example-item"><div class="en">'+highlighted+'</div></div>';
+    });
+    exSection.innerHTML=html;
+  }else{
+    exSection.style.display='none';
+  }
+}
+
+function markUnknown(){
+  nextLearnWord();
+}
+
+function markUnsure(){
+  nextLearnWord();
+}
+
+function markKnown(){
+  let words=getWords();
+  const w=words.find(x=>x.id===learnQueue[learnIdx].id);
+  if(w){
+    w.learned=true;
+    w.repetitions=1;
+    w.nextReview=daysAfter(todayStr(),4);
+  }
+  saveData(words);
+  nextLearnWord();
+}
+
+function nextLearnWord(){
+  learnIdx++;
+  if(learnIdx>=learnQueue.length){
+    document.getElementById('learnCardArea').style.display='none';
+    document.getElementById('learnActions').style.display='none';
+    document.getElementById('learnComplete').classList.add('show');
+    document.getElementById('learnProgressFill').style.width='100%';
+    document.getElementById('learnCompleteMsg').textContent='完成了 '+learnQueue.length+' 个新单词的学习';
+    return;
+  }
+  showLearnWord();
+}
+
+// 复习模式
+function startReview(){
+  const words=getWords();
+  const today=todayStr();
+  reviewQueue=words.filter(w=>w.cat===currentCat&&w.nextReview<=today&&w.learned);
+  if(!reviewQueue.length){alert('今日没有需要复习的单词！');return}
+  currentMode='review';
+  reviewIdx=0;
+  document.getElementById('mainView').style.display='none';
+  document.getElementById('reviewView').classList.add('active');
+  document.getElementById('reviewComplete').classList.remove('show');
+  document.getElementById('reviewCardArea').style.display='';
+  document.getElementById('revealWrap').style.display='';
+  document.getElementById('reviewDetail').style.display='none';
+  document.getElementById('reviewActions').style.display='none';
+  showReviewWord();
+}
+
+function showReviewWord(){
+  const w=reviewQueue[reviewIdx];
+  document.getElementById('rvWord').textContent=w.en;
+  document.getElementById('rvIpa').textContent=w.ipa||'';
+  document.getElementById('reviewProgressText').textContent=(reviewIdx+1)+'/'+reviewQueue.length;
+  const pct=((reviewIdx)/reviewQueue.length)*100;
+  document.getElementById('reviewProgressFill').style.width=pct+'%';
+  
+  document.getElementById('rvZh').textContent=w.zh;
+  
+  // 例句
+  const exSection=document.getElementById('rvExampleSection');
+  if(w.example){
+    exSection.style.display='';
+    const sentences=w.example.split('.').filter(s=>s.trim());
+    let html='<div class="section-title">例句</div>';
+    sentences.slice(0,2).forEach(sent=>{
+      const cleanSent=sent.trim()+'.';
+      const highlighted=cleanSent.replace(new RegExp('\\b'+w.en+'\\b','gi'),'<span class="highlight">'+w.en+'</span>');
+      html+='<div class="example-item"><div class="en">'+highlighted+'</div></div>';
+    });
+    exSection.innerHTML=html;
+  }else{
+    exSection.innerHTML='<div class="section-title">例句</div><div class="example-item"><div class="en" style="color:var(--text2)">暂无例句</div></div>';
+  }
+}
+
+function revealReview(){
+  document.getElementById('revealWrap').style.display='none';
+  document.getElementById('reviewDetail').style.display='';
+  document.getElementById('reviewActions').style.display='flex';
+}
+
+function reviewForgot(){
+  updateWordReview(reviewQueue[reviewIdx].id,'forgot');
+  nextReviewWord();
+}
+
+function reviewHard(){
+  updateWordReview(reviewQueue[reviewIdx].id,'hard');
+  nextReviewWord();
+}
+
+function reviewEasy(){
+  updateWordReview(reviewQueue[reviewIdx].id,'easy');
+  nextReviewWord();
+}
+
+function updateWordReview(wId,result){
+  let words=getWords();
+  const w=words.find(x=>x.id===wId);
+  if(!w)return;
+  if(result==='easy'){
+    w.repetitions++;
+    w.easeFactor=Math.min(3.0,w.easeFactor+0.15);
+    w.interval=Math.round(w.interval*w.easeFactor*1.5);
+  }else if(result==='hard'){
+    w.repetitions=Math.max(1,w.repetitions);
+    w.easeFactor=Math.max(1.3,w.easeFactor-0.1);
+    w.interval=2;
+  }else{
+    w.repetitions=Math.max(0,w.repetitions-1);
+    w.easeFactor=Math.max(1.3,w.easeFactor-0.2);
+    w.interval=1;
+  }
+  w.nextReview=daysAfter(todayStr(),w.interval);
+  saveData(words);
+}
+
+function nextReviewWord(){
+  reviewIdx++;
+  if(reviewIdx>=reviewQueue.length){
+    document.getElementById('reviewCardArea').style.display='none';
+    document.getElementById('reviewActions').style.display='none';
+    document.getElementById('reviewComplete').classList.add('show');
+    document.getElementById('reviewProgressFill').style.width='100%';
+    document.getElementById('reviewCompleteMsg').textContent='完成了 '+reviewQueue.length+' 个单词的复习';
+    return;
+  }
+  document.getElementById('revealWrap').style.display='';
+  document.getElementById('reviewDetail').style.display='none';
+  document.getElementById('reviewActions').style.display='none';
+  showReviewWord();
+}
+
+function backToMain(){
+  document.getElementById('reviewView').classList.remove('active');
+  document.getElementById('learnView').classList.remove('active');
+  document.getElementById('mainView').style.display='';
+  renderList();
+}
+
+renderList();
+</script>
+</body>
+</html>
