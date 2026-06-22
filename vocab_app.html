@@ -559,7 +559,7 @@ function todayStr(){return new Date().toISOString().slice(0,10)}
 function daysAfter(d,n){const dt=new Date(d);dt.setDate(dt.getDate()+n);return dt.toISOString().slice(0,10)}
 
 function initData(){
-  const VERSION = '5.2';
+  const VERSION = '5.3';
   const verKey = 'vocab_app_version';
   const savedVer = localStorage.getItem(verKey);
   if(savedVer !== VERSION){
@@ -571,7 +571,7 @@ function initData(){
     const words=[];
     const today=todayStr();
     PRESET_COATING.forEach((w,i)=>{words.push({id:genId(),en:w.en,zh:w.zh,ipa:w.ipa||'',cat:'涂层',example:w.example||'',nextReview:today,interval:1,easeFactor:2.5,repetitions:1,learned:true})});
-    PRESET_EXAM.forEach((w,i)=>{words.push({id:genId(),en:w.en,zh:w.zh,ipa:w.ipa||'',cat:'考研',example:'',nextReview:daysAfter(today,i%7+1),interval:1,easeFactor:2.5,repetitions:1,learned:true})});
+    PRESET_EXAM.forEach((w,i)=>{words.push({id:genId(),en:w.en,zh:w.zh,ipa:w.ipa||'',cat:'考研',example:'',nextReview:today,interval:1,easeFactor:2.5,repetitions:1,learned:true})});
     saveData(words);
     return words;
   }
