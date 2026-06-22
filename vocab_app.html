@@ -559,7 +559,7 @@ function todayStr(){return new Date().toISOString().slice(0,10)}
 function daysAfter(d,n){const dt=new Date(d);dt.setDate(dt.getDate()+n);return dt.toISOString().slice(0,10)}
 
 function initData(){
-  const VERSION = '5.1';
+  const VERSION = '5.2';
   const verKey = 'vocab_app_version';
   const savedVer = localStorage.getItem(verKey);
   if(savedVer !== VERSION){
